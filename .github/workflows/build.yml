@@ -2,7 +2,6 @@ name: Construire l'APK
 
 on:
   push:
-    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
@@ -10,17 +9,34 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Afficher les fichiers du dépôt
+        run: find . -not -path './.git/*' -type f | sort
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
+
       - uses: android-actions/setup-android@v3
+
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+
       - name: Compiler
-        run: gradle assembleDebug --no-daemon
+        run: |
+          FILE=$(find . -name settings.gradle.kts -not -path './.git/*' | head -1)
+          if [ -z "$FILE" ]; then
+            echo "ERREUR : settings.gradle.kts introuvable. Les fichiers du projet n'ont pas été envoyés."
+            exit 1
+          fi
+          DIR=$(dirname "$FILE")
+          echo "Projet trouvé dans : $DIR"
+          cd "$DIR"
+          gradle assembleDebug --no-daemon --stacktrace
+
       - uses: actions/upload-artifact@v4
         with:
           name: PLRK-Volley-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: '**/app/build/outputs/apk/debug/app-debug.apk'
